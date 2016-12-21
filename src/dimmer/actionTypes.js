@@ -1,0 +1,2 @@
+export const GLOBAL_FETCH_START = 'app/GLOBAL_FETCH_START';
+export const GLOBAL_FETCH_END   = 'app/GLOBAL_FETCH_END';
