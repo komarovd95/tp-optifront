@@ -2,28 +2,44 @@ import React, { Component, PropTypes } from 'react';
 import { Field, reduxForm, getFormSyncErrors } from 'redux-form';
 import { connect } from 'react-redux';
 import { validateField } from '../../../forms/actions';
+import { unique } from '../view';
+import shortid from 'shortid';
 
 
 class RouteSave extends Component {
   static propTypes = {
     onCancel: PropTypes.func.isRequired,
-    formErrors: PropTypes.object
+    formErrors: PropTypes.object,
+    error: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
+    asyncValidating: PropTypes.oneOfType([PropTypes.string, PropTypes.bool])
   };
 
+  handleSubmit = ({ name }) => {
+    return this.props.onCancel();
+  };
 
   render() {
-    const { onCancel } = this.props;
+    const { onCancel, formErrors, error, asyncValidating } = this.props;
+
+    let errors = [];
+    if (formErrors && formErrors.name) {
+      errors = errors.concat(formErrors.name);
+    }
+
+    if (error) {
+      errors.push(error);
+    }
 
     return (
       <div className="ui raised segment route-info-panel">
-        <form className="ui form">
+        <form className={`ui ${errors.length > 0 ? 'error' : ''} ${asyncValidating && 'loading'} form`}>
           <div className="field">
             <label>Имя маршрута</label>
             <Field name="name" component="input" type="text"/>
           </div>
           <div className="ui error message">
             <ul className="list">
-              {/*{errors.map(e => <li key={shortid.generate()}>{e}</li>)}*/}
+              {errors.map(e => <li key={shortid.generate()}>{e}</li>)}
             </ul>
           </div>
         </form>
@@ -70,8 +86,12 @@ const validate = values => {
 };
 
 
-const asyncValidate = (values, dispatch) => {
-
+const asyncValidate = (values, dispatch, props) => {
+  if (!props.pristine) {
+    return dispatch(unique(values.name));
+  } else {
+    return Promise.resolve();
+  }
 };
 
 

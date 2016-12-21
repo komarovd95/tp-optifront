@@ -4,12 +4,13 @@ import { browserHistory } from 'react-router';
 import { createNotify } from '../../notifications/notifications';
 import { globalFetchStart, globalFetchEnd } from '../../app/app';
 import { retrieveData, fetchApi } from '../../api';
-import { PathRoute } from '../model';
+import { PathRoute, getRoutesFromResponseData } from '../model';
 import { fetchOne } from '../routes';
 import { fetchCache as fetchStreets } from '../../streets/streets';
 import { fetchCache as fetchCoverTypes } from '../../coverTypes/coverTypes';
 import { RESOURCE_URL as CARS_URL } from '../../cars/constants';
 import { getCarsFromResponseData } from '../../cars/model';
+import { RESOURCE_URL } from '../constants';
 import { cachePut } from '../../cache';
 import Graph from 'node-dijkstra';
 
@@ -33,8 +34,11 @@ const FETCH_CARS_REQUEST = 'routes/view/FETCH_CARS_REQUEST';
 const FETCH_CARS_SUCCESS = 'routes/view/FETCH_CARS_SUCCESS';
 const FETCH_CARS_FAILURE = 'routes/view/FETCH_CARS_FAILURE';
 
-
 const SAVE_SETTINGS = 'routes/view/SAVE_SETTINGS';
+
+const UNIQUE_REQUEST    = 'routes/UNIQUE_REQUEST';
+const UNIQUE_SUCCESS    = 'routes/UNIQUE_SUCCESS';
+const UNIQUE_FAILURE    = 'routes/UNIQUE_FAILURE';
 
 
 // const initialState = {
@@ -347,3 +351,54 @@ export const findPath = (nodes, edges, criteria, car, f, t) => (dispatch, getSta
 
 
 export const saveSettings = createAction(SAVE_SETTINGS);
+
+export const uniqueRequest = createAction(UNIQUE_REQUEST);
+export const uniqueSuccess = createAction(UNIQUE_SUCCESS);
+export const uniqueFailure = createNotify(UNIQUE_FAILURE);
+
+export const unique = name => (dispatch, getState) => {
+  dispatch(uniqueRequest());
+
+  const owner = getState().auth.user;
+
+  if (!owner) {
+    return Promise.reject({
+      _error: ['Войдите в систему']
+    });
+  }
+
+  const config = {
+    url: `${RESOURCE_URL}/search/findAllByOwnerAndNameContainingIgnoreCase`,
+    params: {
+      owner: owner && owner.self,
+      projection: 'preview',
+      page: 0,
+      size: 1,
+      name: name.trim()
+    }
+  };
+
+  return dispatch(fetchApi(config))
+      .then(data => {
+        const routes = getRoutesFromResponseData(data);
+        dispatch(uniqueSuccess(routes));
+
+        if (routes.result.length > 0) {
+          return Promise.reject({
+            _error: [`Маршрут ${name} уже существует`]
+          });
+        } else {
+          return Promise.resolve();
+        }
+      })
+      .catch(error => {
+        if (error.status) {
+          dispatch(uniqueFailure({
+            message: 'Произошла ошибка на сервере',
+            notifyGlobal: true
+          }));
+        }
+
+        throw error;
+      });
+};
