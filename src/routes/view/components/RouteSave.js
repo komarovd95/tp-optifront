@@ -2,24 +2,24 @@ import React, { Component, PropTypes } from 'react';
 import { Field, reduxForm, getFormSyncErrors } from 'redux-form';
 import { connect } from 'react-redux';
 import { validateField } from '../../../forms/actions';
-import { unique } from '../view';
+import { unique, save } from '../view';
 import shortid from 'shortid';
 
 
 class RouteSave extends Component {
   static propTypes = {
+    onSave: PropTypes.func.isRequired,
     onCancel: PropTypes.func.isRequired,
     formErrors: PropTypes.object,
     error: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
-    asyncValidating: PropTypes.oneOfType([PropTypes.string, PropTypes.bool])
+    asyncValidating: PropTypes.oneOfType([PropTypes.string, PropTypes.bool]),
+    handleSubmit: PropTypes.func.isRequired
   };
 
-  handleSubmit = ({ name }) => {
-    return this.props.onCancel();
-  };
+  handleSubmit = ({ name }) => this.props.onSave(name);
 
   render() {
-    const { onCancel, formErrors, error, asyncValidating } = this.props;
+    const { onCancel, formErrors, error, asyncValidating, handleSubmit } = this.props;
 
     let errors = [];
     if (formErrors && formErrors.name) {
@@ -32,7 +32,8 @@ class RouteSave extends Component {
 
     return (
       <div className="ui raised segment route-info-panel">
-        <form className={`ui ${errors.length > 0 ? 'error' : ''} ${asyncValidating && 'loading'} form`}>
+        <form className={`ui ${errors.length > 0 ? 'error' : ''} ${asyncValidating && 'loading'} form`}
+              onSubmit={handleSubmit(this.handleSubmit)}>
           <div className="field">
             <label>Имя маршрута</label>
             <Field name="name" component="input" type="text"/>
@@ -42,16 +43,15 @@ class RouteSave extends Component {
               {errors.map(e => <li key={shortid.generate()}>{e}</li>)}
             </ul>
           </div>
+          <div className="two ui basic buttons">
+            <button className="ui primary button">
+              Сохранить
+            </button>
+            <a className="ui negative button" onClick={onCancel}>
+              Отмена
+            </a>
+          </div>
         </form>
-        <p/>
-        <div className="two ui buttons">
-          <button className="ui primary button">
-            Сохранить
-          </button>
-          <button className="ui negative button" onClick={onCancel}>
-            Отмена
-          </button>
-        </div>
       </div>
     );
   }
@@ -86,13 +86,7 @@ const validate = values => {
 };
 
 
-const asyncValidate = (values, dispatch, props) => {
-  if (!props.pristine) {
-    return dispatch(unique(values.name));
-  } else {
-    return Promise.resolve();
-  }
-};
+const asyncValidate = (values, dispatch) => dispatch(unique(values.name));
 
 
 const Form = reduxForm({
@@ -108,8 +102,11 @@ const getFormErrors = getFormSyncErrors('RouteSaveForm');
 export default connect(
   state => ({
     initialValues: {
-      name: 'Без названия'
+      name: state.routes.view.route.fetched && state.routes.view.route.fetched.name || 'Без названия'
     },
     formErrors: getFormErrors(state)
+  }),
+  dispatch => ({
+    onSave: name => dispatch(save(name))
   })
 )(Form);

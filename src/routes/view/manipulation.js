@@ -111,11 +111,19 @@ const undoReducer = reducer => {
         if (isEqual(state.present, present)) {
           return state;
         } else {
-          return {
-            past: state.past.concat([state.present]),
-            present,
-            future: []
-          };
+          if (state.past.length === 50) {
+            return {
+              past: state.past.slice(1).concat([state.present]),
+              present,
+              future: []
+            };
+          } else {
+            return {
+              past: state.past.concat([state.present]),
+              present,
+              future: []
+            };
+          }
         }
       }
     }

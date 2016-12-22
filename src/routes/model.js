@@ -24,6 +24,14 @@ export class PathRoute extends Entity {
   get edges() {
     return this._edges;
   }
+
+  set nodes(nodes) {
+    this._nodes = nodes;
+  }
+
+  set edges(edges) {
+    this._edges = edges;
+  }
 }
 
 

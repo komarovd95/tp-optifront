@@ -1,5 +1,6 @@
 import { createAction } from 'redux-actions';
 import { RESOURCE_URL } from './constants';
+import { RESOURCE_URL as USERS_URL } from '../users/constants';
 import { fetchApi } from '../api';
 import { getRoutesFromResponseData, PathRoute } from './model';
 
@@ -12,9 +13,9 @@ const FETCH_ALL_REQUEST = 'routes/FETCH_ALL_REQUEST';
 const FETCH_ALL_SUCCESS = 'routes/FETCH_ALL_SUCCESS';
 const FETCH_ALL_FAILURE = 'routes/FETCH_ALL_FAILURE';
 
-// const CREATE_REQUEST    = 'routes/CREATE_REQUEST';
-// const CREATE_SUCCESS    = 'routes/CREATE_SUCCESS';
-// const CREATE_FAILURE    = 'routes/CREATE_FAILURE';
+const CREATE_REQUEST    = 'routes/CREATE_REQUEST';
+const CREATE_SUCCESS    = 'routes/CREATE_SUCCESS';
+const CREATE_FAILURE    = 'routes/CREATE_FAILURE';
 
 // const CHANGE_REQUEST    = 'routes/CHANGE_REQUEST';
 // const CHANGE_SUCCESS    = 'routes/CHANGE_SUCCESS';
@@ -38,7 +39,25 @@ export const fetchOne = id => dispatch => {
 
   return dispatch(fetchApi(config))
     .then(data => {
-      const route = new PathRoute(data); // dTODO schema
+      const route = new PathRoute(data);
+
+      const nodeConfig = {
+        url: `${config.url}/nodes`
+      };
+
+      const edgeConfig = {
+        url: `${config.url}/edges`
+      };
+
+      return Promise.all([
+        Promise.resolve(route),
+        dispatch(fetchApi(nodeConfig)),
+        dispatch(fetchApi(edgeConfig))
+      ]);
+    })
+    .then(([route, nodes, edges]) => {
+      route.nodes = nodes["_embedded"] ? nodes["_embedded"].nodes : [];
+      route.edges = edges["_embedded"] ? edges["_embedded"].edges : [];
       dispatch(fetchOneSuccess(route));
       return route;
     })
@@ -89,32 +108,47 @@ export const fetchAll = (owner, pageable, sort, filter, projection) => dispatch 
     });
 };
 
-//eateRequest = createAction(CREATE_REQUEST);
-// export const createSuccess = createAction(CREATE_SUCCESS);
-// export const createFailure = createAction(CREATE_FAILURE);
+export const createRequest = createAction(CREATE_REQUEST);
+export const createSuccess = createAction(CREATE_SUCCESS);
+export const createFailure = createAction(CREATE_FAILURE);
 
-// TODO
-// export const create = credentials => dispatch => {
-//   dispatch(createRequest());
-//
-//   const config = {
-//     url: RESOURCE_URL,
-//     method: 'post',
-//     data: window.JSON.stringify(credentials),
-//     successStatus: 201
-//   };
-//
-//   return dispatch(fetchApi(config))
-//     .then(data => {
-//       const user = new PathUser(data);
-//       dispatch(createSuccess(user));
-//       return user;
-//     })
-//     .catch(error => {
-//       dispatch(createFailure(error));
-//       throw error;
-//     });
-// };
+export const create = (owner, { name, nodes, edges }) => dispatch => {
+  dispatch(createRequest());
+
+  const config = {
+    url: RESOURCE_URL,
+    method: 'post',
+    data: window.JSON.stringify({ owner: owner.self, name}),
+    successStatus: 201
+  };
+
+  return dispatch(fetchApi(config))
+    .then(data => {
+      const route = new PathRoute(data);
+
+      const nodeConfig = {
+        url: 'api/nodes',
+        method: 'post',
+        data: window.JSON.stringify(Object.keys(nodes).map(key => nodes[key]).map(node => ({
+          position: {
+            x: node.x,
+            y: node.y
+          },
+          light: node.light
+        }))),
+        successStatus: 201
+      };
+
+      return Promise.all([Promise.resolve(route), dispatch(fetchApi(nodeConfig))]);
+    })
+    .then(([route, nodes]) => {
+      console.log('route', route, nodes);
+    })
+    .catch(error => {
+      dispatch(createFailure(error));
+      throw error;
+    });
+};
 
 
 // export const changeRequest = createAction(CHANGE_REQUEST);

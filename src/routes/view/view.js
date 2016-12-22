@@ -5,7 +5,7 @@ import { createNotify } from '../../notifications/notifications';
 import { globalFetchStart, globalFetchEnd } from '../../app/app';
 import { retrieveData, fetchApi } from '../../api';
 import { PathRoute, getRoutesFromResponseData } from '../model';
-import { fetchOne } from '../routes';
+import { fetchOne, create } from '../routes';
 import { fetchCache as fetchStreets } from '../../streets/streets';
 import { fetchCache as fetchCoverTypes } from '../../coverTypes/coverTypes';
 import { RESOURCE_URL as CARS_URL } from '../../cars/constants';
@@ -25,6 +25,10 @@ const STORAGE_ITEM = 'x-path-route';
 const LOAD_REQUEST = 'routes/view/LOAD_REQUEST';
 const LOAD_SUCCESS = 'routes/view/LOAD_SUCCESS';
 const LOAD_FAILURE = 'routes/view/LOAD_FAILURE';
+
+const SAVE_REQUEST = 'routes/view/SAVE_REQUEST';
+const SAVE_SUCCESS = 'routes/view/SAVE_SUCCESS';
+const SAVE_FAILURE = 'routes/view/SAVE_FAILURE';
 
 const FETCH_CACHES_REQUEST = 'routes/view/FETCH_CACHES_REQUEST';
 const FETCH_CACHES_SUCCESS = 'routes/view/FETCH_CACHES_SUCCESS';
@@ -75,7 +79,25 @@ const UNIQUE_FAILURE    = 'routes/UNIQUE_FAILURE';
 //   }
 // }
 
+const defaultState = {
+  fetched: null
+};
+
+const route = (state = defaultState, action) => {
+  switch (action.type) {
+    case LOAD_SUCCESS:
+      return {
+        fetched: action.payload
+      };
+
+    default:
+      return state;
+  }
+};
+
+
 export default combineReducers({
+  route,
   manipulation,
   settings
 });
@@ -103,15 +125,35 @@ export const load = id => dispatch => {
       .then(data => new PathRoute(data))
       .catch(() => new PathRoute({
         name: '',
-        nodes: [{id: 1, x: 100, y: 100}],
+        nodes: [{id: 1, position: { x: 100, y: 100 }}, {id: 2, position: { x: 150, y: 150 }}],
         edges: [{id: 1, from: 1, to: 2}]
       }))
       .then(route => {
         dispatch(globalFetchEnd());
         dispatch(loadSuccess(route));
         dispatch(init({
-          nodes: route.nodes,
-          edges: route.edges
+          nodes: route.nodes.reduce((obj, node) => {
+            obj[node.id] = {
+              id: node.id,
+              x: node.position.x,
+              y: node.position.y,
+              light: node.light
+            };
+            return obj;
+          }, {}),
+          edges: route.edges.reduce((obj, edge) => {
+            obj[edge.id] = {
+              id: edge.id,
+              from: edge.from,
+              to: edge.to,
+              directed: edge.directed,
+              length: edge.length,
+              limit: edge.limit,
+              coverType: edge.coverType,
+              street: edge.street
+            };
+            return obj;
+          }, {})
         }));
         return route;
       })
@@ -269,6 +311,24 @@ export const fetchCars = () => (dispatch, getState) => {
         }));
       });
   }
+};
+
+
+const saveRequest = createAction(SAVE_REQUEST);
+const saveSuccess = createNotify(SAVE_SUCCESS);
+const saveFailure = createNotify(SAVE_FAILURE);
+
+export const save = name => (dispatch, getState) => {
+  dispatch(saveRequest());
+
+  const {
+    route: { fetched: route },
+    manipulation: { present: { nodes, edges } }
+  } = getState().routes.view;
+
+  const owner = getState().auth.user;
+
+  return dispatch(create(owner, { name, nodes, edges }));
 };
 
 
