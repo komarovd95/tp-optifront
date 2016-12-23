@@ -208,7 +208,7 @@ nav.ui.menu {
     top: 58px;
     margin: 10px;
     position: absolute;
-    z-index: 2000;
+    z-index: 999;
     padding: 0 !important;
   }
 
@@ -217,7 +217,7 @@ nav.ui.menu {
     padding: 10px;
     position: absolute;
     top: 200px;
-    z-index: 10000;
+    z-index: 999;
   }
 
   .route-info-panel {
@@ -225,7 +225,7 @@ nav.ui.menu {
     width: 25%;
     bottom: 10px;
     left: 37.5%;
-    z-index: 2000;
+    z-index: 999;
     text-align: center;
   }
 
@@ -233,12 +233,12 @@ nav.ui.menu {
     position: absolute;
     width: 25%;
     right: 10px;
-    z-index: 2000;
+    z-index: 999;
   }
 
   .route-settings {
     position: absolute;
-    z-index: 2000;
+    z-index: 999;
     top: 104px;
     left: 10px;
   }

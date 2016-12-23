@@ -16,7 +16,7 @@ class RouteSave extends Component {
     handleSubmit: PropTypes.func.isRequired
   };
 
-  handleSubmit = ({ name }) => this.props.onSave(name);
+  handleSubmit = ({ name }) => this.props.onSave(name).then(() => this.props.onCancel());
 
   render() {
     const { onCancel, formErrors, error, asyncValidating, handleSubmit } = this.props;
@@ -43,7 +43,7 @@ class RouteSave extends Component {
               {errors.map(e => <li key={shortid.generate()}>{e}</li>)}
             </ul>
           </div>
-          <div className="two ui basic buttons">
+          <div className="fluid ui basic buttons">
             <button className="ui primary button">
               Сохранить
             </button>

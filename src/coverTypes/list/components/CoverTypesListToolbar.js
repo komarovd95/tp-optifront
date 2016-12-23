@@ -56,7 +56,7 @@ class CoverTypesListToolbar extends Component {
                 <i className="search icon" style={{ margin: 0 }}/>
               </div>
               <input type="text"
-                     placeholder="Тип топлива"
+                     placeholder="Тип покрытия"
                      onChange={this.handleFilterChange}
                      defaultValue={this.props.filter}/>
             </div>

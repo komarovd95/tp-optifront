@@ -6,7 +6,7 @@ import { browserHistory } from 'react-router';
 
 export const axiosInstance = axios.create({
   baseURL: process.env.NODE_ENV === 'production' ? '/' : '/external',
-  timeout: 5000
+  timeout: 15000
 });
 
 
@@ -84,7 +84,7 @@ export const storeStart = createAction(STORE_START);
 export const storeEnd   = createAction(STORE_END);
 
 export const storeData = (key, data) => dispatch => {
-  dispatch(storeStart());
+  dispatch(storeStart(key));
 
   return new Promise((resolve, reject) => {
     if (window && window.localStorage) {
@@ -95,10 +95,10 @@ export const storeData = (key, data) => dispatch => {
       reject({ key, data });
     }
   }).then(storedData => {
-    dispatch(storeEnd());
+    dispatch(storeEnd(storedData));
     return storedData;
   }).catch(error => {
-    dispatch(storeEnd());
+    dispatch(storeEnd(error));
     throw error;
   });
 };

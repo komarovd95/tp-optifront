@@ -9,8 +9,10 @@ class RouteUndoToolbar extends PureComponent {
     canRedo: PropTypes.bool,
     disabled: PropTypes.bool,
     onSaveClick: PropTypes.func.isRequired,
+    onDeleteClick: PropTypes.func.isRequired,
     onAddNodeClick: PropTypes.func.isRequired,
     onAddEdgeClick: PropTypes.func.isRequired,
+    onPathClick: PropTypes.func.isRequired,
     onSettingsClick: PropTypes.func.isRequired,
     onUndo: PropTypes.func.isRequired,
     onRedo: PropTypes.func.isRequired
@@ -19,8 +21,9 @@ class RouteUndoToolbar extends PureComponent {
 
   render() {
     const {
-      canUndo, canRedo, disabled, onSaveClick, onAddNodeClick, onAddEdgeClick, onSettingsClick,
-      onUndo, onRedo
+      canUndo, canRedo, disabled,
+      onSaveClick, onDeleteClick, onAddNodeClick, onAddEdgeClick, onSettingsClick, onUndo, onRedo,
+      onPathClick
     } = this.props;
 
     return (
@@ -51,10 +54,22 @@ class RouteUndoToolbar extends PureComponent {
             <i className="road icon"/>
           </button>
           <button className={`ui icon ${disabled ? 'disabled' : ''} button`}
+                  onClick={onPathClick}
+                  data-tooltip="Найти оптимальный маршрут"
+                  data-position="bottom left">
+            <i className="share alternate icon"/>
+          </button>
+          <button className={`ui icon ${disabled ? 'disabled' : ''} button`}
                   onClick={onSettingsClick}
                   data-tooltip="Настройки карты"
                   data-position="bottom left">
             <i className="settings icon"/>
+          </button>
+          <button className={`ui icon ${disabled ? 'disabled' : ''} button`}
+                  onClick={onDeleteClick}
+                  data-tooltip="Удалить карту"
+                  data-position="bottom left">
+            <i className="remove circle icon"/>
           </button>
           <button className={`ui icon ${(!canUndo || disabled) ? 'disabled' : ''} button`}
                   onClick={onSaveClick}

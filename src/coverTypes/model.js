@@ -8,7 +8,7 @@ export class CoverType extends Entity {
     super(id, createdAt, updatedAt, _links);
 
     this._coverTypeName = coverTypeName;
-    this._streetType = slowdown;
+    this._slowdown = slowdown;
   }
 
   get coverTypeName() {
@@ -16,7 +16,7 @@ export class CoverType extends Entity {
   }
 
   get slowdown() {
-    return this._streetType;
+    return this._slowdown;
   }
 }
 

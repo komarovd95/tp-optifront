@@ -23,18 +23,18 @@ const LandingPage = () => (
         <div className="three column row">
           <div className="column">
             <img className="ui medium circular image"
-                 src="http://www.freeiconspng.com/uploads/red-square-png-14.png" />
+                 src={require('../images/route1.png')} />
             <h4 className="ui header">Маршруты</h4>
             <p>Создайте свой маршрут или выберите из уже существующих</p>
           </div>
           <div className="column">
 
-            <img className="ui medium circular image" src="http://www.freeiconspng.com/uploads/red-square-png-14.png" />
+            <img className="ui medium circular image" src={require('../images/route2.png')} />
             <h4 className="ui header">Поиск</h4>
             <p>Задайте один из трех критериев поиска оптимального пути</p>
           </div>
           <div className="column">
-            <img className="ui medium circular image" src="http://www.freeiconspng.com/uploads/red-square-png-14.png" />
+            <img className="ui medium circular image" src={require('../images/route3.png')} />
             <h4 className="ui header">Лучший результат</h4>
             <p>Получите наиболее подходящий вариант для вашей поездки</p>
           </div>
@@ -51,7 +51,7 @@ const LandingPage = () => (
             <Link to="signup" className="ui inverted huge button">
               Создать аккаунт
             </Link>
-            <Link to="new-route" className="ui inverted huge button">
+            <Link to="routes/new" className="ui inverted huge button">
               Попробовать
             </Link>
           </div>
@@ -67,10 +67,9 @@ const LandingPage = () => (
               <b>Path</b>
             </h4>
             <div className="ui inverted link list">
-              <a className="item">О нас</a>
-              <a className="item">О программе</a>
-              <a className="item">Новый маршрут</a>
-              <a className="item">FAQ</a>
+              <Link to="/about" className="item">О программе</Link>
+              <Link to="/routes/new" className="item">Новый маршрут</Link>
+              <Link to="/faq" className="item">FAQ</Link>
               <a className="disabled item">Самара 2016</a>
             </div>
             </div>

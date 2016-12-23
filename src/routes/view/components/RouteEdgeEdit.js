@@ -12,6 +12,8 @@ class RouteEdgeEdit extends Component {
   static propTypes = {
     edge: PropTypes.object.isRequired,
     directedRoad: PropTypes.bool,
+    hasTraffic: PropTypes.bool,
+    limit: PropTypes.number,
     formErrors: PropTypes.object,
     onUpdate: PropTypes.func.isRequired,
     onRemove: PropTypes.func.isRequired,
@@ -33,7 +35,9 @@ class RouteEdgeEdit extends Component {
       from: changeDirection ? edge.to : edge.from,
       to: changeDirection ? edge.from : edge.to,
       coverType: coverTypes.find(coverType => coverType.coverTypeName === values.coverType),
-      street: streets.find(street => street.streetName === values.street)
+      street: streets.find(street => street.streetName === values.street),
+      policeman: values.policeman || null,
+      traffic: values.hasTraffic ? values.traffic : null
     });
     onCancel();
   };
@@ -45,7 +49,7 @@ class RouteEdgeEdit extends Component {
 
   render() {
     const {
-      pristine, handleSubmit, streets, coverTypes, onCancel, formErrors, directedRoad
+      pristine, handleSubmit, streets, coverTypes, onCancel, formErrors, directedRoad, hasTraffic, limit
     } = this.props;
 
     const errors = [];
@@ -111,6 +115,26 @@ class RouteEdgeEdit extends Component {
                   {`${s.streetType} ${s.streetName}`}
                 </option>
               )}
+            </Field>
+          </div>
+          <div className="field">
+            <div className="ui checkbox">
+              <Field name="hasTraffic" component="input" type="checkbox"/>
+              <label>Пробка</label>
+            </div>
+          </div>
+          <div className="field">
+            <label>Скорость в пробке</label>
+            <Field name="traffic" component="input" type="number" min={0} max={limit} step={1}
+                   disabled={!hasTraffic}/>
+          </div>
+          <div className="field">
+            <label>Патрульный</label>
+            <Field name="policeman" component="select">
+              <option value="">Нет</option>
+              <option value="greedy">Жадный</option>
+              <option value="honest">Честный</option>
+              <option value="slow">Медлительный</option>
             </Field>
           </div>
           <div className="ui error message">
@@ -201,12 +225,16 @@ export default connect(
       coverType: edge.coverType ? edge.coverType.coverTypeName : '',
       directed: edge.directed,
       length: edge.length,
-      limit: edge.limit || 60
+      limit: edge.limit || 60,
+      policeman: edge.policeman,
+      traffic: edge.traffic
     },
     streets: mapNormalizedToArray(getStreetsCache(state)),
     coverTypes: mapNormalizedToArray(getCoverTypesCache(state)),
     formErrors: getFormErrors(state),
-    directedRoad: getFormValues(state, 'directed')
+    directedRoad: getFormValues(state, 'directed'),
+    hasTraffic: getFormValues(state, 'hasTraffic'),
+    limit: getFormValues(state, 'limit')
   }),
   dispatch => ({
     onUpdate: edge => dispatch(updateEdge(edge)),

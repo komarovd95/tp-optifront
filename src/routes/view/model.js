@@ -1,18 +1,18 @@
-export const greedyPoliceman = {
+export const greedy = {
   time: 0.25,
   cost: 2500,
   name: 'greedy',
   locale: 'Жадный'
 };
 
-export const honestPoliceman = {
+export const honest = {
   time: 0.25,
   cost: 1000,
   name: 'honest',
   locale: 'Честный'
 };
 
-export const slowPoliceman = {
+export const slow = {
   time: 0.5,
   cost: 1000,
   name: 'slow',

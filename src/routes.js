@@ -1,6 +1,7 @@
 import React from 'react';
 import { Route, IndexRoute, Redirect } from 'react-router';
 import { SecuredComponent } from './users/auth';
+import { storeRoute } from './routes/view/view';
 
 
 import App from './app';
@@ -25,12 +26,16 @@ import UsersList from './users/list';
 import ForbiddenPage from './pages/401';
 import NotFoundPage from './pages/404';
 
+import AboutPage from './pages/AboutPage';
+import FAQPage from './pages/FAQPage';
 import { RouteViewContainer } from './routes/view';
 
 
-export default (
+export default (store) => (
     <Route path="/" component={App}>
       <IndexRoute component={LandingPage}/>
+      <Route path="about" component={AboutPage}/>
+      <Route path="faq" component={FAQPage}/>
       <Route path="signin" component={SignIn}/>
       <Route path="signup" component={SignUp}/>
       <Route path="id:userId" component={Profile}>
@@ -70,7 +75,7 @@ export default (
       </Route>
       <Route path="routes">
         <Route path="id:routeId" component={RouteViewContainer}/>
-        <Route path="new" component={RouteViewContainer}/>
+        <Route path="new" component={RouteViewContainer} onLeave={() => store.dispatch(storeRoute())}/>
         <Route path="example" component={RouteViewContainer}/>
       </Route>
       <Route path="401" component={ForbiddenPage}/>

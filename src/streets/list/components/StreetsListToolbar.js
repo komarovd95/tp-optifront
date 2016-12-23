@@ -51,7 +51,7 @@ class StreetsListToolbar extends Component {
                 <i className="search icon" style={{ margin: 0 }}/>
               </div>
               <input type="text"
-                     placeholder="Тип топлива"
+                     placeholder="Название улицы"
                      onChange={this.handleFilterChange}
                      defaultValue={this.props.filter.streetName}/>
             </div>

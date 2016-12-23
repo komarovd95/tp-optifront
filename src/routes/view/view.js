@@ -1,13 +1,15 @@
+import React from 'react';
 import { createAction } from 'redux-actions';
 import { combineReducers } from 'redux';
 import { browserHistory } from 'react-router';
 import { createNotify } from '../../notifications/notifications';
 import { globalFetchStart, globalFetchEnd } from '../../app/app';
-import { retrieveData, fetchApi } from '../../api';
+import { retrieveData, removeData, fetchApi } from '../../api';
 import { PathRoute, getRoutesFromResponseData } from '../model';
-import { fetchOne, create } from '../routes';
+import { fetchOne, create, update, remove as removeApi } from '../routes';
 import { fetchCache as fetchStreets } from '../../streets/streets';
 import { fetchCache as fetchCoverTypes } from '../../coverTypes/coverTypes';
+import { fetchCache as fetchFuelTypes } from '../../fuelTypes/fuelTypes';
 import { RESOURCE_URL as CARS_URL } from '../../cars/constants';
 import { getCarsFromResponseData } from '../../cars/model';
 import { RESOURCE_URL } from '../constants';
@@ -16,6 +18,8 @@ import Graph from 'node-dijkstra';
 
 import manipulation, { init } from './manipulation';
 import settings from './settings';
+import path from './path';
+import { showModal } from '../../modal/modal';
 
 
 
@@ -34,50 +38,20 @@ const FETCH_CACHES_REQUEST = 'routes/view/FETCH_CACHES_REQUEST';
 const FETCH_CACHES_SUCCESS = 'routes/view/FETCH_CACHES_SUCCESS';
 const FETCH_CACHES_FAILURE = 'routes/view/FETCH_CACHES_FAILURE';
 
-const FETCH_CARS_REQUEST = 'routes/view/FETCH_CARS_REQUEST';
-const FETCH_CARS_SUCCESS = 'routes/view/FETCH_CARS_SUCCESS';
-const FETCH_CARS_FAILURE = 'routes/view/FETCH_CARS_FAILURE';
+const FETCH_CARS_REQUEST   = 'routes/view/FETCH_CARS_REQUEST';
+const FETCH_CARS_SUCCESS   = 'routes/view/FETCH_CARS_SUCCESS';
+const FETCH_CARS_FAILURE   = 'routes/view/FETCH_CARS_FAILURE';
 
-const SAVE_SETTINGS = 'routes/view/SAVE_SETTINGS';
+const SAVE_SETTINGS        = 'routes/view/SAVE_SETTINGS';
 
-const UNIQUE_REQUEST    = 'routes/UNIQUE_REQUEST';
-const UNIQUE_SUCCESS    = 'routes/UNIQUE_SUCCESS';
-const UNIQUE_FAILURE    = 'routes/UNIQUE_FAILURE';
+const UNIQUE_REQUEST       = 'routes/view/UNIQUE_REQUEST';
+const UNIQUE_SUCCESS       = 'routes/view/UNIQUE_SUCCESS';
+const UNIQUE_FAILURE       = 'routes/view/UNIQUE_FAILURE';
 
+const REMOVE_REQUEST       = 'routes/view/REMOVE_REQUEST';
+const REMOVE_SUCCESS       = 'routes/view/REMOVE_SUCCESS';
+const REMOVE_FAILURE       = 'routes/view/REMOVE_FAILURE';
 
-// const initialState = {
-//   route: null,
-//   settings: {
-//     lights: true,
-//     scaleNodes: true,
-//     scaleEdges: true,
-//     length: true,
-//     coverTypes: true,
-//     streetNames: true,
-//     limits: true,
-//     traffic: true,
-//     police: true
-//   }
-// };
-//
-// export default function reducer(state = initialState, action) {
-//   switch (action.type) {
-//     case LOAD_SUCCESS:
-//       return {
-//         ...state,
-//         route: action.payload
-//       };
-//
-//     case SAVE_SETTINGS:
-//       return {
-//         ...state,
-//         settings: action.payload
-//       };
-//
-//     default:
-//       return state;
-//   }
-// }
 
 const defaultState = {
   fetched: null
@@ -99,7 +73,8 @@ const route = (state = defaultState, action) => {
 export default combineReducers({
   route,
   manipulation,
-  settings
+  settings,
+  path
 });
 
 
@@ -125,33 +100,19 @@ export const load = id => dispatch => {
       .then(data => new PathRoute(data))
       .catch(() => new PathRoute({
         name: '',
-        nodes: [{id: 1, position: { x: 100, y: 100 }}, {id: 2, position: { x: 150, y: 150 }}],
-        edges: [{id: 1, from: 1, to: 2}]
+        nodes: [],
+        edges: []
       }))
       .then(route => {
         dispatch(globalFetchEnd());
         dispatch(loadSuccess(route));
         dispatch(init({
           nodes: route.nodes.reduce((obj, node) => {
-            obj[node.id] = {
-              id: node.id,
-              x: node.position.x,
-              y: node.position.y,
-              light: node.light
-            };
+            obj[node.id] = node;
             return obj;
           }, {}),
           edges: route.edges.reduce((obj, edge) => {
-            obj[edge.id] = {
-              id: edge.id,
-              from: edge.from,
-              to: edge.to,
-              directed: edge.directed,
-              length: edge.length,
-              limit: edge.limit,
-              coverType: edge.coverType,
-              street: edge.street
-            };
+            obj[edge.id] = edge;
             return obj;
           }, {})
         }));
@@ -173,25 +134,11 @@ export const load = id => dispatch => {
         dispatch(loadSuccess(route));
         dispatch(init({
           nodes: route.nodes.reduce((obj, node) => {
-            obj[node.id] = {
-              id: node.id,
-              x: node.position.x,
-              y: node.position.y,
-              light: node.light
-            };
+            obj[node.id] = node;
             return obj;
           }, {}),
           edges: route.edges.reduce((obj, edge) => {
-            obj[edge.id] = {
-              id: edge.id,
-              from: edge.from,
-              to: edge.to,
-              directed: edge.directed,
-              length: edge.length,
-              limit: edge.limit,
-              coverType: edge.coverType,
-              street: edge.street
-            };
+            obj[edge.id] = edge;
             return obj;
           }, {})
         }));
@@ -213,6 +160,24 @@ export const load = id => dispatch => {
 };
 
 
+export const storeRoute = () => (dispatch, getState) => {
+  const {manipulation: {present: {nodes, edges}}, route: {fetched: route}} = getState().routes.view;
+
+  if (route && !route.id) {
+    const data = {
+      name: route.name,
+      nodes: Object.keys(nodes).map(k => nodes[k]),
+      edges: Object.keys(edges).map(k => edges[k])
+    };
+
+    if (window && window.localStorage) {
+      const dataToStore = window.JSON.stringify(data);
+      window.localStorage.setItem(STORAGE_ITEM, dataToStore);
+    }
+  }
+};
+
+
 const fetchCachesRequest = createAction(FETCH_CACHES_REQUEST);
 const fetchCachesSuccess = createAction(FETCH_CACHES_SUCCESS);
 const fetchCachesFailure = createNotify(FETCH_CACHES_FAILURE);
@@ -224,13 +189,13 @@ export const fetchCaches = () => (dispatch, getState) => {
 
   dispatch(fetchCachesRequest());
 
-  const { streets, coverTypes } = getState().cache;
+  const { streets, coverTypes, fuelTypes } = getState().cache;
 
-  if (streets && coverTypes) {
+  if (streets && coverTypes && fuelTypes) {
     return new Promise(resolve => {
       dispatch(globalFetchEnd());
 
-      const result = { streets, coverTypes };
+      const result = { streets, coverTypes, fuelTypes };
 
       dispatch(fetchCachesSuccess(result));
       resolve(result);
@@ -238,9 +203,10 @@ export const fetchCaches = () => (dispatch, getState) => {
   } else {
     const streetsFetcher = dispatch(fetchStreets());
     const coverTypesFetcher = dispatch(fetchCoverTypes());
+    const fuelTypesFetcher = dispatch(fetchFuelTypes());
 
-    return Promise.all([streetsFetcher, coverTypesFetcher])
-      .then(([s, cT]) => {
+    return Promise.all([streetsFetcher, coverTypesFetcher, fuelTypesFetcher])
+      .then(([s, cT, fT]) => {
         dispatch(cachePut({
           key: 'streets',
           value: s
@@ -251,7 +217,12 @@ export const fetchCaches = () => (dispatch, getState) => {
           value: cT
         }));
 
-        const result = { streets: s, coverTypes: cT };
+        dispatch(cachePut({
+          key: 'fuelTypes',
+          value: fT
+        }));
+
+        const result = { streets: s, coverTypes: cT, fuelTypes: fT };
 
         dispatch(fetchCachesSuccess(result));
         dispatch(globalFetchEnd());
@@ -319,6 +290,7 @@ const saveSuccess = createNotify(SAVE_SUCCESS);
 const saveFailure = createNotify(SAVE_FAILURE);
 
 export const save = name => (dispatch, getState) => {
+  dispatch(globalFetchStart({ message: 'Сохранение маршрута'}));
   dispatch(saveRequest());
 
   const {
@@ -326,10 +298,176 @@ export const save = name => (dispatch, getState) => {
     manipulation: { present: { nodes, edges } }
   } = getState().routes.view;
 
+  for (let key in edges) {
+    if (!edges.hasOwnProperty(key)) {
+      continue;
+    }
+
+    const { length, limit, coverType, street, traffic } = edges[key];
+
+    if (!length || length < 100 || length > 50000) {
+      dispatch(globalFetchEnd());
+      dispatch(saveFailure({
+        message: 'Длина участка дороги должна быть в пределах от 100 до 50000 м',
+        notifyGlobal: true
+      }));
+      return Promise.reject();
+    }
+
+    if (!limit || limit < 20 || limit > 110) {
+      dispatch(globalFetchEnd());
+      dispatch(saveFailure({
+        message: 'Ограничение скорости должно быть в пределах от 20 до 110 км/ч',
+        notifyGlobal: true
+      }));
+      return Promise.reject();
+    }
+
+    if (!coverType) {
+      dispatch(globalFetchEnd());
+      dispatch(saveFailure({
+        message: 'Укажите тип покрытия у каждого участка дороги',
+        notifyGlobal: true
+      }));
+      return Promise.reject();
+    }
+
+    if (!street) {
+      dispatch(globalFetchEnd());
+      dispatch(saveFailure({
+        message: 'Укажите название улицы у каждого участка дороги',
+        notifyGlobal: true
+      }));
+      return Promise.reject();
+    }
+
+    if (traffic >= 0 && traffic > limit) {
+      dispatch(globalFetchEnd());
+      dispatch(saveFailure({
+        message: 'Скорость движения в пробке не может быть больше, чем ограничение!',
+        notifyGlobal: true
+      }));
+      return Promise.reject();
+    }
+  }
+
+  for (let key in nodes) {
+    if (!nodes.hasOwnProperty(key)) {
+      continue;
+    }
+
+    const degree = Object.keys(edges).map(k => edges[k])
+      .filter(edge => edge.from === key || edge.to === key).length;
+
+    if (!degree) {
+      dispatch(globalFetchEnd());
+      dispatch(saveFailure({
+        message: 'Найдены несоединенные вершины',
+        notifyGlobal: true
+      }));
+      return Promise.reject();
+    }
+  }
+
   const owner = getState().auth.user;
 
-  return dispatch(create(owner, { name, nodes, edges }));
+  if (route.id) {
+    return dispatch(update(route, name, nodes, edges))
+      .then(route => {
+        dispatch(globalFetchEnd());
+        dispatch(loadSuccess(route));
+        dispatch(saveSuccess({
+          message: `Маршрут ${name} успешно сохранен`,
+          notifyGlobal: true,
+          level: 'INFO'
+        }));
+        return route;
+      })
+      .catch(() => {
+        dispatch(globalFetchEnd());
+        dispatch(saveFailure({
+            message: 'Ошибка при сохранении маршрута',
+            notifyGlobal: true
+        }));
+      });
+  } else {
+    return dispatch(create(owner, { name, nodes, edges }))
+      .then(route => {
+        dispatch(globalFetchEnd());
+        dispatch(loadSuccess(route));
+        dispatch(saveSuccess({
+          message: `Маршрут ${name} успешно сохранен`,
+          notifyGlobal: true,
+          level: 'INFO'
+        }));
+        return route;
+      })
+      .catch(() => {
+        dispatch(globalFetchEnd());
+        dispatch(saveFailure({
+            message: 'Ошибка при сохранении маршрута',
+            notifyGlobal: true
+        }));
+      });
+  }
 };
+
+
+const removeRequest = createAction(REMOVE_REQUEST);
+const removeSuccess = createNotify(REMOVE_SUCCESS);
+const removeFailure = createNotify(REMOVE_FAILURE);
+
+export const remove = () => (dispatch, getState) => {
+  dispatch(removeRequest());
+
+  const route = getState().routes.view.route.fetched;
+
+  if (!route.id) {
+    console.log('remove');
+    dispatch(loadSuccess(new PathRoute({
+      name: '',
+      nodes: [],
+      edges: []
+    })));
+    dispatch(init({
+      nodes: {},
+      edges: {}
+    }));
+    return dispatch(removeData(STORAGE_ITEM)).catch(() => {});
+  }
+
+  return dispatch(removeApi(route))
+    .then(() => dispatch(removeSuccess({
+      message: `Маршрут ${route.name} успешно удален!`,
+      level: 'INFO',
+      notifyGlobal: true
+    })))
+    .catch(() => dispatch(removeFailure({
+      message: 'При удалении произошла ошибка, попробуйте позже',
+      notifyGlobal: true
+    })));
+};
+
+
+export const showDeleteModal = () => (dispatch, getState) => {
+  const route = getState().routes.view.route.fetched;
+
+  dispatch(showModal({
+    title: 'Удалить маршрут',
+    message: (
+      <p>Вы действительно желаете удалить маршрут
+        <b> {route.name}</b>?
+      </p>
+    ),
+    accept: () => dispatch(remove()).then(() => route.id && browserHistory.push('/'))
+  }));
+};
+
+
+
+
+
+
 
 
 const lengthFunction = e => e.length;
@@ -408,6 +546,12 @@ export const findPath = (nodes, edges, criteria, car, f, t) => (dispatch, getSta
 
   console.log('path', path);
 };
+
+
+
+
+
+
 
 
 export const saveSettings = createAction(SAVE_SETTINGS);

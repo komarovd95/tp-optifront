@@ -142,11 +142,15 @@ export const changeRequest = createAction(CHANGE_REQUEST);
 export const changeSuccess = createAction(CHANGE_SUCCESS);
 export const changeFailure = createAction(CHANGE_FAILURE);
 
-export const change = (fuelType, { fuelTypeName }) => dispatch => {
+export const change = (fuelType, { fuelTypeName, cost }) => dispatch => {
   const requestData = {};
 
   if (fuelTypeName) {
     requestData.fuelTypeName = fuelTypeName;
+  }
+
+  if (cost) {
+    requestData.cost = cost;
   }
 
   dispatch(changeRequest(fuelType));

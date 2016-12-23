@@ -1,6 +1,5 @@
 import { createAction } from 'redux-actions';
 import { RESOURCE_URL } from './constants';
-import { RESOURCE_URL as USERS_URL } from '../users/constants';
 import { fetchApi } from '../api';
 import { getRoutesFromResponseData, PathRoute } from './model';
 
@@ -17,13 +16,13 @@ const CREATE_REQUEST    = 'routes/CREATE_REQUEST';
 const CREATE_SUCCESS    = 'routes/CREATE_SUCCESS';
 const CREATE_FAILURE    = 'routes/CREATE_FAILURE';
 
-// const CHANGE_REQUEST    = 'routes/CHANGE_REQUEST';
-// const CHANGE_SUCCESS    = 'routes/CHANGE_SUCCESS';
-// const CHANGE_FAILURE    = 'routes/CHANGE_FAILURE';
-//
-// const REMOVE_REQUEST    = 'routes/REMOVE_REQUEST';
-// const REMOVE_SUCCESS    = 'routes/REMOVE_SUCCESS';
-// const REMOVE_FAILURE    = 'routes/REMOVE_FAILURE';
+const UPDATE_REQUEST    = 'routes/UPDATE_REQUEST';
+const UPDATE_SUCCESS    = 'routes/UPDATE_SUCCESS';
+const UPDATE_FAILURE    = 'routes/UPDATE_FAILURE';
+
+const REMOVE_REQUEST    = 'routes/REMOVE_REQUEST';
+const REMOVE_SUCCESS    = 'routes/REMOVE_SUCCESS';
+const REMOVE_FAILURE    = 'routes/REMOVE_FAILURE';
 
 
 export const fetchOneRequest = createAction(FETCH_ONE_REQUEST);
@@ -40,24 +39,6 @@ export const fetchOne = id => dispatch => {
   return dispatch(fetchApi(config))
     .then(data => {
       const route = new PathRoute(data);
-
-      const nodeConfig = {
-        url: `${config.url}/nodes`
-      };
-
-      const edgeConfig = {
-        url: `${config.url}/edges`
-      };
-
-      return Promise.all([
-        Promise.resolve(route),
-        dispatch(fetchApi(nodeConfig)),
-        dispatch(fetchApi(edgeConfig))
-      ]);
-    })
-    .then(([route, nodes, edges]) => {
-      route.nodes = nodes["_embedded"] ? nodes["_embedded"].nodes : [];
-      route.edges = edges["_embedded"] ? edges["_embedded"].edges : [];
       dispatch(fetchOneSuccess(route));
       return route;
     })
@@ -118,31 +99,20 @@ export const create = (owner, { name, nodes, edges }) => dispatch => {
   const config = {
     url: RESOURCE_URL,
     method: 'post',
-    data: window.JSON.stringify({ owner: owner.self, name}),
+    data: window.JSON.stringify({
+      owner: owner.self,
+      name: name.trim(),
+      nodes: Object.keys(nodes).map(key => nodes[key]),
+      edges: Object.keys(edges).map(key => edges[key])
+    }),
     successStatus: 201
   };
 
   return dispatch(fetchApi(config))
     .then(data => {
       const route = new PathRoute(data);
-
-      const nodeConfig = {
-        url: 'api/nodes',
-        method: 'post',
-        data: window.JSON.stringify(Object.keys(nodes).map(key => nodes[key]).map(node => ({
-          position: {
-            x: node.x,
-            y: node.y
-          },
-          light: node.light
-        }))),
-        successStatus: 201
-      };
-
-      return Promise.all([Promise.resolve(route), dispatch(fetchApi(nodeConfig))]);
-    })
-    .then(([route, nodes]) => {
-      console.log('route', route, nodes);
+      dispatch(createSuccess(route));
+      return route;
     })
     .catch(error => {
       dispatch(createFailure(error));
@@ -151,95 +121,63 @@ export const create = (owner, { name, nodes, edges }) => dispatch => {
 };
 
 
-// export const changeRequest = createAction(CHANGE_REQUEST);
-// export const changeSuccess = createAction(CHANGE_SUCCESS);
-// export const changeFailure = createAction(CHANGE_FAILURE);
-//
-// export const change = (user, { password, roles, driveStyle }) => dispatch => {
-//   const requestData = {};
-//
-//   if (password) {
-//     requestData.password = password;
-//   }
-//
-//   if (roles) {
-//     requestData.roles = roles;
-//   }
-//
-//   if (driveStyle) {
-//     requestData.driveStyle = driveStyle;
-//   }
-//
-//   dispatch(changeRequest(user));
-//
-//   const config = {
-//     url: `${RESOURCE_URL}/${user.id}`,
-//     method: 'patch',
-//     data: window.JSON.stringify(requestData)
-//   };
-//
-//   return dispatch(fetchApi(config))
-//     .then(data => {
-//       const user = new PathUser(data);
-//
-//       dispatch(changeSuccess(user));
-//
-//       if (password) {
-//         dispatch(storeData(LOGIN_ITEM_NAME,
-//           Buffer.from(user.username + ':' + password.trim(), 'ascii')
-//             .toString('base64')));
-//       }
-//
-//       return user;
-//     })
-//     .catch(error => {
-//       dispatch(changeFailure(error));
-//       throw error;
-//     });
-// };
-//
-//
-// const removeRequest = createAction(REMOVE_REQUEST);
-// const removeSuccess = createAction(REMOVE_SUCCESS);
-// const removeFailure = createAction(REMOVE_FAILURE);
-//
-// export const remove = user => dispatch => {
-//   dispatch(removeRequest());
-//
-//   const config = {
-//     url: `${RESOURCE_URL}/${user.id}`,
-//     method: 'delete',
-//     successStatus: 204
-//   };
-//
-//   return dispatch(fetchApi(config))
-//     .then(() => dispatch(removeSuccess()))
-//     .catch(error => {
-//       dispatch(removeFailure(error));
-//       throw error;
-//     });
-// };
-//
-//
-// const deleteRequest = createAction(types.DELETE_ROUTE_REQUEST);
-// const deleteSuccess = createAction(types.DELETE_ROUTE_SUCCESS);
-// const deleteFailure = createAction(types.DELETE_ROUTE_FAILURE);
-//
-// export const deleteRoute = (id) => (dispatch) => {
-//   dispatch(deleteRequest());
-//
-//   const config = {
-//     url: `${RESOURCE_URL}/${id}`,
-//     method: 'DELETE',
-//     success: 204
-//   };
-//
-//   return dispatch(fetchApi(config))
-//     .then(() => dispatch(deleteSuccess()))
-//     .catch(error => {
-//       dispatch(deleteFailure(error));
-//       throw error;
-//     });
-// };
+export const updateRequest = createAction(UPDATE_REQUEST);
+export const updateSuccess = createAction(UPDATE_SUCCESS);
+export const updateFailure = createAction(UPDATE_FAILURE);
+
+const plainObject = obj => Object.keys(obj).reduce((o, key) => {
+  const subKey = key.substring(1);
+  o[subKey] = obj[key];
+  return o;
+}, {});
+
+export const update = (route, name, nodes, edges) => dispatch => {
+  dispatch(updateRequest());
+
+  const config = {
+    url: `${RESOURCE_URL}/${route.id}`,
+    method: 'patch',
+    data: window.JSON.stringify({
+      name,
+      nodes: Object.keys(nodes).map(key => nodes[key]),
+      edges: Object.keys(edges).map(key => edges[key]).map(edge => ({
+        ...edge,
+        coverType: plainObject(edge.coverType),
+        street: plainObject(edge.street)
+      }))
+    })
+  };
+
+  return dispatch(fetchApi(config))
+    .then(data => {
+      const route = new PathRoute(data);
+      dispatch(updateSuccess(route));
+      return route;
+    })
+    .catch(error => {
+      dispatch(updateFailure(error));
+      throw error;
+    });
+};
 
 
+const removeRequest = createAction(REMOVE_REQUEST);
+const removeSuccess = createAction(REMOVE_SUCCESS);
+const removeFailure = createAction(REMOVE_FAILURE);
+
+export const remove = route => dispatch => {
+  dispatch(removeRequest());
+
+  const config = {
+    url: `${RESOURCE_URL}/${route.id}`,
+    method: 'delete',
+    successStatus: 204
+  };
+
+  return dispatch(fetchApi(config))
+    .then(() => dispatch(removeSuccess()))
+    .catch(error => {
+      dispatch(removeFailure(error));
+      throw error;
+    });
+};
